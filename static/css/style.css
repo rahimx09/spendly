@@ -146,26 +146,26 @@ a { color: inherit; text-decoration: none; }
     gap: 0.5rem;
     background: var(--accent-light);
     color: var(--accent);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 500;
-    padding: 0.5rem 1.1rem;
+    padding: 0.55rem 1.2rem;
     border-radius: 999px;
-    margin-bottom: 2rem;
+    margin-bottom: 2.25rem;
 }
 
 .hero-badge-dot {
-    width: 8px;
-    height: 8px;
+    width: 9px;
+    height: 9px;
     border-radius: 999px;
     background: var(--accent);
 }
 
 .hero-title {
     font-family: var(--font-body);
-    font-weight: 600;
-    font-size: clamp(2.5rem, 5vw, 3.75rem);
-    line-height: 1.1;
-    letter-spacing: -0.025em;
+    font-weight: 700;
+    font-size: clamp(2.25rem, 4.5vw, 3.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
     color: var(--ink);
     margin-bottom: 1.5rem;
 }
@@ -175,20 +175,20 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hero-subtitle {
-    font-size: 1.05rem;
-    color: var(--ink-muted);
-    line-height: 1.7;
-    max-width: 560px;
+    font-size: 1rem;
+    color: #6b6b6b;
+    line-height: 1.65;
+    max-width: 540px;
     margin-bottom: 2.25rem;
 }
 
 .hero-actions {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 3.5rem;
+    margin-bottom: 4rem;
 }
 
 /* ------------------------------------------------------------------ */
@@ -203,12 +203,12 @@ a { color: inherit; text-decoration: none; }
 
 .mock-card {
     background: var(--paper-card);
-    border: 1px solid var(--border);
+    border: 1px solid #eceae3;
     border-radius: var(--radius-lg);
-    padding: 1.5rem 1.75rem 2rem;
+    padding: 1.25rem 1.5rem 1.75rem;
     width: 100%;
     max-width: 760px;
-    box-shadow: 0 12px 48px rgba(0,0,0,0.06);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.05);
 }
 
 .mock-dots {
@@ -231,36 +231,38 @@ a { color: inherit; text-decoration: none; }
 .mock-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+    gap: 0.875rem;
+    margin-bottom: 1rem;
 }
 
 .mock-stat {
-    background: var(--paper);
-    border: 1px solid var(--border-soft);
+    background: var(--paper-card);
+    border: 1px solid #eceae3;
     border-radius: var(--radius-md);
-    padding: 1.1rem 1.25rem;
+    padding: 1rem 1.15rem;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
     text-align: left;
 }
 
 .mock-stat-label {
-    font-size: 0.8rem;
-    color: var(--ink-muted);
+    font-size: 0.85rem;
+    color: #8a8a8a;
 }
 
 .mock-stat-value {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-family: var(--font-body);
+    font-size: 1.6rem;
+    font-weight: 600;
     color: var(--ink);
     line-height: 1.1;
+    letter-spacing: -0.01em;
 }
 
 .mock-stat-meta {
-    font-size: 0.8rem;
-    color: var(--ink-muted);
+    font-size: 0.85rem;
+    color: #8a8a8a;
 }
 
 .mock-stat-meta-up   { color: var(--danger); }
@@ -269,30 +271,30 @@ a { color: inherit; text-decoration: none; }
 .mock-bars {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
-    background: var(--paper);
-    border: 1px solid var(--border-soft);
+    gap: 0.8rem;
+    background: var(--paper-card);
+    border: 1px solid #eceae3;
     border-radius: var(--radius-md);
-    padding: 1.1rem 1.25rem;
+    padding: 1rem 1.15rem;
 }
 
 .mock-bar-row {
     display: grid;
-    grid-template-columns: 70px 1fr;
+    grid-template-columns: 60px 1fr;
     align-items: center;
-    gap: 1rem;
+    gap: 0.85rem;
 }
 
 .mock-cat {
     font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--ink-soft);
+    font-weight: 400;
+    color: #6b6b6b;
     text-align: left;
 }
 
 .mock-bar-track {
-    height: 8px;
-    background: var(--border-soft);
+    height: 7px;
+    background: #eeebe4;
     border-radius: 999px;
     overflow: hidden;
 }
@@ -303,9 +305,9 @@ a { color: inherit; text-decoration: none; }
     transition: width 0.6s ease;
 }
 
-.mock-bar-food   { background: var(--accent-2); }
-.mock-bar-travel { background: #5b7fa6; }
-.mock-bar-bills  { background: #8b5e83; }
+.mock-bar-food   { background: #d99745; }
+.mock-bar-travel { background: #6b8fc4; }
+.mock-bar-bills  { background: #8e6aa3; }
 
 /* ------------------------------------------------------------------ */
 /* Buttons                                                             */
@@ -315,11 +317,11 @@ a { color: inherit; text-decoration: none; }
     display: inline-block;
     background: var(--ink);
     color: var(--paper);
-    padding: 0.65rem 1.5rem;
-    border-radius: var(--radius-sm);
+    padding: 0.75rem 1.6rem;
+    border-radius: 10px;
     font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
     border: none;
     transition: background 0.2s;
