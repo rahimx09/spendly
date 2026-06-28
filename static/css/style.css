@@ -125,38 +125,52 @@ a { color: inherit; text-decoration: none; }
 
 .hero {
     padding: 5rem 2rem 4rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    text-align: center;
     max-width: var(--max-width);
     margin: 0 auto;
 }
 
+.hero-inner {
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .hero-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     background: var(--accent-light);
     color: var(--accent);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.5rem 1.1rem;
     border-radius: 999px;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.hero-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
 }
 
 .hero-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: clamp(2.5rem, 5vw, 3.75rem);
     line-height: 1.1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     color: var(--ink);
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
-.hero-title em {
-    font-style: italic;
+.hero-title-accent {
     color: var(--accent);
 }
 
@@ -164,14 +178,17 @@ a { color: inherit; text-decoration: none; }
     font-size: 1.05rem;
     color: var(--ink-muted);
     line-height: 1.7;
-    max-width: 460px;
-    margin-bottom: 2rem;
+    max-width: 560px;
+    margin-bottom: 2.25rem;
 }
 
 .hero-actions {
     display: flex;
     gap: 1rem;
     align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 3.5rem;
 }
 
 /* ------------------------------------------------------------------ */
@@ -179,6 +196,7 @@ a { color: inherit; text-decoration: none; }
 /* ------------------------------------------------------------------ */
 
 .hero-visual {
+    width: 100%;
     display: flex;
     justify-content: center;
 }
@@ -187,52 +205,93 @@ a { color: inherit; text-decoration: none; }
     background: var(--paper-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 2rem;
+    padding: 1.5rem 1.75rem 2rem;
     width: 100%;
-    max-width: 380px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.06);
+    max-width: 760px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.06);
 }
 
-.mock-card-header {
+.mock-dots {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 1.75rem;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--border-soft);
+    gap: 0.45rem;
+    margin-bottom: 1.5rem;
 }
 
-.mock-label {
+.mock-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.mock-dot-red    { background: #f0a8a0; }
+.mock-dot-yellow { background: #f0cf86; }
+.mock-dot-green  { background: #9bc8b1; }
+
+.mock-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.mock-stat {
+    background: var(--paper);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    text-align: left;
+}
+
+.mock-stat-label {
     font-size: 0.8rem;
-    font-weight: 500;
     color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
 }
 
-.mock-total {
+.mock-stat-value {
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     color: var(--ink);
+    line-height: 1.1;
 }
 
-.mock-bars { display: flex; flex-direction: column; gap: 1rem; }
+.mock-stat-meta {
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+}
+
+.mock-stat-meta-up   { color: var(--danger); }
+.mock-stat-meta-good { color: var(--accent); }
+
+.mock-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    background: var(--paper);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.25rem;
+}
 
 .mock-bar-row {
     display: grid;
-    grid-template-columns: 80px 1fr 60px;
+    grid-template-columns: 70px 1fr;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .mock-cat {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: var(--ink-soft);
+    text-align: left;
 }
 
 .mock-bar-track {
-    height: 6px;
+    height: 8px;
     background: var(--border-soft);
     border-radius: 999px;
     overflow: hidden;
@@ -240,21 +299,13 @@ a { color: inherit; text-decoration: none; }
 
 .mock-bar {
     height: 100%;
-    background: var(--accent);
     border-radius: 999px;
     transition: width 0.6s ease;
 }
 
-.mock-bar-2 { background: var(--accent-2); }
-.mock-bar-3 { background: #5b7fa6; }
-.mock-bar-4 { background: #8b5e83; }
-
-.mock-amt {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--ink-muted);
-    text-align: right;
-}
+.mock-bar-food   { background: var(--accent-2); }
+.mock-bar-travel { background: #5b7fa6; }
+.mock-bar-bills  { background: #8b5e83; }
 
 /* ------------------------------------------------------------------ */
 /* Buttons                                                             */
@@ -570,16 +621,12 @@ a { color: inherit; text-decoration: none; }
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 900px) {
-    .hero {
-        grid-template-columns: 1fr;
-        text-align: center;
-    }
-
-    .hero-subtitle { max-width: 100%; }
-    .hero-actions { justify-content: center; }
-    .hero-visual { display: none; }
-
     .features-inner { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+    .mock-stats { grid-template-columns: 1fr; }
+    .mock-card { padding: 1.25rem; }
 }
 
 @media (max-width: 600px) {
