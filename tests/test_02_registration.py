@@ -39,7 +39,7 @@ def test_post_valid_creates_user_and_redirects(client):
     before = _user_count()
     resp = client.post("/register", data=VALID, follow_redirects=False)
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/profile")
+    assert resp.headers["Location"].endswith("/")
     assert _user_count() == before + 1
 
     # Session should hold the new user's id after the redirect.

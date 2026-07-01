@@ -106,6 +106,43 @@ def create_user(name: str, email: str, password: str) -> int:
         conn.close()
 
 
+def find_user_by_email(email: str) -> sqlite3.Row | None:
+    """Return the user with the given email, or None.
+
+    Lowercases the email before the query so case variants
+    (`Demo@Spendly.com` vs `demo@spendly.com`) all match the
+    same row — the same convention `create_user` and the
+    registration route already use. Returns None (does not
+    raise) when no user has that email.
+    """
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT id, name, email, password_hash FROM users "
+            "WHERE email = ?",
+            (email.lower(),),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def find_user_by_id(user_id: int) -> sqlite3.Row | None:
+    """Return the user with the given id, or None.
+
+    Used by the navbar to look up the signed-in user's name
+    once per request without running a query in the template.
+    """
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT id, name, email, password_hash FROM users "
+            "WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
 def seed_db() -> None:
     """Insert demo user + 8 sample expenses. No-op if already seeded."""
     conn = get_db()

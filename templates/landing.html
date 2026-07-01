@@ -4,6 +4,26 @@
 
 {% block content %}
 
+{% if g.user %}
+
+<section class="hero">
+    <div class="hero-inner">
+        <h1 class="hero-title">
+            Welcome back, {{ g.user["name"] }}.
+        </h1>
+        <p class="hero-subtitle">
+            You're signed in to Spendly. Your dashboard and expense
+            tracking land in upcoming steps — until then, you can
+            sign out below.
+        </p>
+        <div class="hero-actions">
+            <a href="{{ url_for('logout') }}" class="btn-primary">Sign out</a>
+        </div>
+    </div>
+</section>
+
+{% else %}
+
 <section class="hero">
     <div class="hero-inner">
         <div class="hero-badge">
@@ -114,6 +134,8 @@
         <a href="{{ url_for('register') }}" class="btn-primary">Create free account</a>
     </div>
 </section>
+
+{% endif %}
 
 {% endblock %}
 
