@@ -46,6 +46,29 @@ def load_signed_in_user():
     g.user = find_user_by_id(user_id) if user_id else None
 
 
+# Endpoints that only make sense for signed-out visitors. A signed-in
+# user revisiting /login or /register would just re-render the form
+# (or, worse, POST a second account / overwrite the session), so we
+# bounce them to the landing page. Adding a future route to this set
+# is the entire opt-in cost.
+SIGNED_OUT_ONLY_ENDPOINTS = {"login", "register"}
+
+
+@app.before_request
+def block_auth_pages_when_signed_in():
+    """Redirect signed-in users away from sign-in / sign-up pages.
+
+    Runs after `load_signed_in_user` (Flask runs before_request hooks
+    in registration order), so `g.user` is already populated. The
+    endpoint filter excludes `/` and other public routes — important,
+    otherwise the redirect target would itself be blocked and we'd
+    loop.
+    """
+    if g.user is not None and request.endpoint in SIGNED_OUT_ONLY_ENDPOINTS:
+        return redirect(url_for("landing"))
+    return None
+
+
 @app.route("/")
 def landing():
     return render_template("landing.html")

@@ -307,3 +307,104 @@ def test_signed_in_landing_has_sign_out_link(client):
     body = resp.get_data(as_text=True)
     # The Sign out link points at /logout via url_for.
     assert 'href="/logout"' in body
+
+
+# ------------------------------------------------------------------ #
+# Auth-page guard — signed-in users can't reach /login or /register   #
+# ------------------------------------------------------------------ #
+
+def _sign_in(client):
+    """Helper: log the demo user in via POST /login. Returns the user id."""
+    _seed_demo_user()
+    client.post(
+        "/login",
+        data={"email": DEMO_EMAIL, "password": DEMO_PASSWORD},
+        follow_redirects=False,
+    )
+    with client.session_transaction() as sess:
+        return sess.get("user_id")
+
+
+def test_get_login_redirects_to_landing_when_signed_in(client):
+    _sign_in(client)
+    resp = client.get("/login", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/")
+    # The form must not render — a 302 short-circuits before the
+    # template, so the response body is the redirect itself.
+    body = resp.get_data(as_text=True)
+    assert 'action="/login"' not in body
+    assert "Sign in" not in body or "Welcome back" in body  # not the auth form
+
+
+def test_post_login_redirects_to_landing_when_signed_in(client):
+    """POSTing to /login while signed in must not overwrite the session."""
+    existing_user_id = _sign_in(client)
+
+    resp = client.post(
+        "/login",
+        data={"email": "other@example.com", "password": "anything"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/")
+
+    # The existing user_id must be preserved — the guard redirects,
+    # it must not pop or replace the session.
+    with client.session_transaction() as sess:
+        assert sess.get("user_id") == existing_user_id
+
+
+def test_get_register_redirects_to_landing_when_signed_in(client):
+    _sign_in(client)
+    resp = client.get("/register", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/")
+    body = resp.get_data(as_text=True)
+    assert 'action="/register"' not in body
+
+
+def test_post_register_redirects_to_landing_when_signed_in(client):
+    """POSTing to /register while signed in must not create a new user."""
+    _sign_in(client)
+
+    # Count users before — to assert the POST is fully blocked, not
+    # just redirected after side effects.
+    conn = get_db()
+    try:
+        before = conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"]
+    finally:
+        conn.close()
+
+    resp = client.post(
+        "/register",
+        data={
+            "name": "Imposter",
+            "email": "imposter@example.com",
+            "password": "validpass123",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/")
+
+    conn = get_db()
+    try:
+        after = conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"]
+    finally:
+        conn.close()
+    assert after == before, "POST /register must not create a user when signed in"
+
+
+def test_get_login_still_renders_form_when_signed_out(client):
+    """Regression guard: the public path must still work."""
+    resp = client.get("/login")
+    assert resp.status_code == 200
+    assert 'action="/login"' in resp.get_data(as_text=True)
+
+
+def test_get_register_still_renders_form_when_signed_out(client):
+    """Regression guard: the public path must still work."""
+    resp = client.get("/register")
+    assert resp.status_code == 200
+    assert 'action="/register"' in resp.get_data(as_text=True)
