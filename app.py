@@ -71,6 +71,8 @@ def block_auth_pages_when_signed_in():
 
 @app.route("/")
 def landing():
+    if g.user is not None:
+        return redirect(url_for("profile"))
     return render_template("landing.html")
 
 

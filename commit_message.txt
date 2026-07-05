@@ -1,0 +1,8 @@
+Fix landing page redirect - signed-in users redirect to profile
+
+When a signed-in user clicks the Spendly logo in the navbar, they should be redirected to their profile page instead of showing the marketing landing page.
+
+Changes:
+- Modified app.py / route to check if user is authenticated
+- Redirect authenticated users to /profile
+- Keep landing.html accessible only to unauthenticated users
