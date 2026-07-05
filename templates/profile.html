@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Your profile — Spendly{% endblock %}
+
+{% block content %}
+
+<section class="profile-page">
+    <div class="profile-inner">
+
+        <!-- 1. User info card -->
+        <div class="user-card">
+            <div class="user-avatar">{{ user.initials }}</div>
+            <div class="user-info">
+                <h1 class="user-name">{{ user.name }}</h1>
+                <p class="user-email">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                    </svg>
+                    {{ user.email }}
+                </p>
+                <p class="user-since">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M8 2v4" />
+                        <path d="M16 2v4" />
+                        <rect width="18" height="18" x="3" y="4" rx="2" />
+                        <path d="M3 10h18" />
+                    </svg>
+                    Member since {{ user.member_since }}
+                </p>
+            </div>
+        </div>
+
+        <!-- 2. Summary stats row -->
+        <div class="stat-row">
+            {% for s in summary %}
+            <div class="stat-card">
+                <div class="stat-icon">
+                    {% if s.icon == "wallet" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+                    </svg>
+                    {% elif s.icon == "receipt" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 17V7" />
+                        <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" />
+                        <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" />
+                    </svg>
+                    {% elif s.icon == "tag" %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
+                        <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
+                    </svg>
+                    {% endif %}
+                </div>
+                <span class="stat-label">{{ s.label }}</span>
+                <span class="stat-value">{{ s.value }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 3. Transaction history table -->
+        <div class="section-card">
+            <h2 class="section-title">Recent transactions</h2>
+            <div class="table-wrap">
+                <table class="expense-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th class="expense-amount">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in transactions %}
+                        <tr>
+                            <td class="expense-date">{{ t.date }}</td>
+                            <td class="expense-desc">{{ t.description }}</td>
+                            <td><span class="cat-badge">{{ t.category }}</span></td>
+                            <td class="expense-amount">₹{{ "%.2f"|format(t.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. Category breakdown -->
+        <div class="section-card">
+            <h2 class="section-title">Spending by category</h2>
+            <div class="cat-list">
+                {% for c in categories %}
+                <div class="cat-row">
+                    <div class="cat-row-head">
+                        <span class="cat-row-name">
+                            <span class="cat-dot"></span>
+                            {{ c.name }}
+                        </span>
+                        <span class="cat-row-amount">
+                            ₹{{ "%.2f"|format(c.amount) }} &middot; {{ c.percent }}%
+                        </span>
+                    </div>
+                    <div class="cat-bar-track">
+                        <div class="cat-bar" style="width: {{ c.percent }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

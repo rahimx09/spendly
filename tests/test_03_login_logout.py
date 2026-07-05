@@ -53,23 +53,27 @@ def test_post_valid_credentials_sets_session_and_redirects(client):
         follow_redirects=False,
     )
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    # Successful sign-in lands the user on their profile page.
+    assert resp.headers["Location"].endswith("/profile")
 
     with client.session_transaction() as sess:
         assert sess.get("user_id") is not None
 
 
-def test_post_valid_credentials_redirects_to_landing(client):
+def test_post_valid_credentials_redirects_to_profile(client):
     _seed_demo_user()
     resp = client.post(
         "/login",
         data={"email": DEMO_EMAIL, "password": DEMO_PASSWORD},
         follow_redirects=True,
     )
-    # Land on the signed-in landing page (root URL).
+    # Land on the user's profile page (200 + the user info card).
     assert resp.status_code == 200
-    assert b"Welcome back" in resp.data
-    assert DEMO_NAME.encode() in resp.data
+    body = resp.get_data(as_text=True)
+    assert DEMO_NAME in body
+    assert DEMO_EMAIL in body
+    # The "Welcome back" marketing copy is gone from the /profile route.
+    assert "Welcome back" not in body
 
 
 # ------------------------------------------------------------------ #
@@ -120,13 +124,21 @@ def test_post_unknown_email_shows_same_generic_error(client):
 def test_post_email_is_case_insensitive(client):
     _seed_demo_user()
     for variant in ("Demo@Spendly.com", "DEMO@SPENDLY.COM", "demo@SPENDLY.com"):
+        # Sign out between iterations — once the first variant
+        # succeeds, the next POST would hit the "signed-in user
+        # can't reach /login" guard and redirect to /landing instead of
+        # /profile. Logging out keeps each iteration a clean
+        # sign-in attempt.
+        with client.session_transaction() as sess:
+            sess.pop("user_id", None)
+
         resp = client.post(
             "/login",
             data={"email": variant, "password": DEMO_PASSWORD},
             follow_redirects=False,
         )
         assert resp.status_code == 302, f"variant {variant!r} should succeed"
-        assert resp.headers["Location"].endswith("/")
+        assert resp.headers["Location"].endswith("/profile")
 
 
 # ------------------------------------------------------------------ #
@@ -334,7 +346,10 @@ def test_get_login_redirects_to_landing_when_signed_in(client):
     # template, so the response body is the redirect itself.
     body = resp.get_data(as_text=True)
     assert 'action="/login"' not in body
-    assert "Sign in" not in body or "Welcome back" in body  # not the auth form
+    # The auth form is not rendered — the 302 short-circuits before
+    # the template, so the body is just the redirect itself. The
+    # form's submit button text would be the only other tell, so
+    # we assert the form did not render.
 
 
 def test_post_login_redirects_to_landing_when_signed_in(client):

@@ -101,8 +101,11 @@ def register():
             except sqlite3.IntegrityError:
                 error = "An account with that email already exists."
             else:
-                session["user_id"] = user_id
-                return redirect(url_for("landing"))
+                # Account created — send the user to /login so they
+                # explicitly sign in. We deliberately do NOT set
+                # session["user_id"] here; auto-signing-in bypasses
+                # the password re-entry that protects the account.
+                return redirect(url_for("login"))
 
         return render_template(
             "register.html",
@@ -138,7 +141,7 @@ def login():
             user = find_user_by_email(email)
             if user and check_password_hash(user["password_hash"], password):
                 session["user_id"] = user["id"]
-                return redirect(url_for("landing"))
+                return redirect(url_for("profile"))
             error = "Invalid email or password."
 
         return render_template("login.html", error=error, email=email)
@@ -157,6 +160,58 @@ def privacy():
 
 
 # ------------------------------------------------------------------ #
+# Authenticated routes                                                 #
+# ------------------------------------------------------------------ #
+
+@app.route("/profile")
+def profile():
+    if g.user is None:
+        return redirect(url_for("login"))
+
+    user = {
+        "name": g.user["name"],
+        "email": g.user["email"],
+        "member_since": "March 2026",
+        "initials": (g.user["name"][:2] or "DU").upper(),
+    }
+
+    summary = [
+        {"label": "Total spent",  "value": "₹4,688.50", "icon": "wallet"},
+        {"label": "Transactions", "value": "8",          "icon": "receipt"},
+        {"label": "Top category", "value": "Bills",      "icon": "tag"},
+    ]
+
+    transactions = [
+        {"date": "2026-07-01", "description": "Lunch at office canteen", "category": "Food",          "amount": 250.00},
+        {"date": "2026-07-02", "description": "Dinner with friends",     "category": "Food",          "amount": 180.50},
+        {"date": "2026-07-03", "description": "Uber to airport",         "category": "Transport",     "amount": 90.00},
+        {"date": "2026-07-04", "description": "Electricity bill",        "category": "Bills",         "amount": 1500.00},
+        {"date": "2026-07-05", "description": "Pharmacy refill",         "category": "Health",        "amount": 450.00},
+        {"date": "2026-07-06", "description": "Movie tickets",           "category": "Entertainment", "amount": 799.00},
+        {"date": "2026-07-07", "description": "New running shoes",       "category": "Shopping",      "amount": 1299.00},
+        {"date": "2026-07-08", "description": "Gift wrap supplies",      "category": "Other",         "amount": 120.00},
+    ]
+
+    categories = [
+        {"name": "Bills",         "amount": 1500.00, "percent": 32},
+        {"name": "Shopping",      "amount": 1299.00, "percent": 28},
+        {"name": "Entertainment", "amount": 799.00,  "percent": 17},
+        {"name": "Health",        "amount": 450.00,  "percent": 10},
+        {"name": "Food",          "amount": 430.50,  "percent": 9},
+        {"name": "Other",         "amount": 120.00,  "percent": 3},
+        {"name": "Transport",     "amount": 90.00,   "percent": 2},
+    ]
+
+    return render_template(
+        "profile.html",
+        user=user,
+        summary=summary,
+        transactions=transactions,
+        categories=categories,
+    )
+
+
+# ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
 
@@ -166,11 +221,6 @@ def logout():
     # no KeyError, no 500.
     session.pop("user_id", None)
     return redirect(url_for("login"))
-
-
-@app.route("/profile")
-def profile():
-    return "Profile page — coming in Step 4"
 
 
 @app.route("/expenses/add")

@@ -39,19 +39,20 @@ def test_post_valid_creates_user_and_redirects(client):
     before = _user_count()
     resp = client.post("/register", data=VALID, follow_redirects=False)
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    # Registration redirects to /login so the new user must
+    # explicitly sign in (we do NOT auto-sign-in).
+    assert resp.headers["Location"].endswith("/login")
     assert _user_count() == before + 1
 
-    # Session should hold the new user's id after the redirect.
+    # The user must sign in before the session is populated.
     with client.session_transaction() as sess:
-        assert "user_id" in sess
-        new_id = sess["user_id"]
+        assert "user_id" not in sess
 
-    # The id points at a real row in the DB.
+    # The new user is queryable in the DB.
     conn = get_db()
     try:
         row = conn.execute(
-            "SELECT name, email FROM users WHERE id = ?", (new_id,)
+            "SELECT name, email FROM users WHERE email = ?", (VALID["email"],)
         ).fetchone()
     finally:
         conn.close()
