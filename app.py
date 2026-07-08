@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import sqlite3
@@ -9,6 +10,11 @@ from database.db import (
     create_user,
     find_user_by_email,
     find_user_by_id,
+    get_category_breakdown,
+    get_recent_expenses,
+    get_user_expense_count,
+    get_user_top_category,
+    get_user_total_spent,
     init_db,
     seed_db,
 )
@@ -170,39 +176,35 @@ def profile():
     if g.user is None:
         return redirect(url_for("login"))
 
+    user_id = g.user["id"]
+
+    # `created_at` is the SQLite `datetime('now')` literal, e.g.
+    # "2026-03-15 12:34:56". Slicing the first 10 chars before
+    # strptime keeps the parse robust to that format and to
+    # any future migration that drops the time component.
+    member_since = datetime.datetime.strptime(
+        g.user["created_at"][:10], "%Y-%m-%d"
+    ).strftime("%B %Y")
+
     user = {
         "name": g.user["name"],
         "email": g.user["email"],
-        "member_since": "March 2026",
+        "member_since": member_since,
         "initials": (g.user["name"][:2] or "DU").upper(),
     }
 
+    total = get_user_total_spent(user_id)
+    count = get_user_expense_count(user_id)
+    top = get_user_top_category(user_id)
+
     summary = [
-        {"label": "Total spent",  "value": "₹4,688.50", "icon": "wallet"},
-        {"label": "Transactions", "value": "8",          "icon": "receipt"},
-        {"label": "Top category", "value": "Bills",      "icon": "tag"},
+        {"label": "Total spent",  "value": f"₹{total:,.2f}", "icon": "wallet"},
+        {"label": "Transactions", "value": str(count),         "icon": "receipt"},
+        {"label": "Top category", "value": top or "—",         "icon": "tag"},
     ]
 
-    transactions = [
-        {"date": "2026-07-01", "description": "Lunch at office canteen", "category": "Food",          "amount": 250.00},
-        {"date": "2026-07-02", "description": "Dinner with friends",     "category": "Food",          "amount": 180.50},
-        {"date": "2026-07-03", "description": "Uber to airport",         "category": "Transport",     "amount": 90.00},
-        {"date": "2026-07-04", "description": "Electricity bill",        "category": "Bills",         "amount": 1500.00},
-        {"date": "2026-07-05", "description": "Pharmacy refill",         "category": "Health",        "amount": 450.00},
-        {"date": "2026-07-06", "description": "Movie tickets",           "category": "Entertainment", "amount": 799.00},
-        {"date": "2026-07-07", "description": "New running shoes",       "category": "Shopping",      "amount": 1299.00},
-        {"date": "2026-07-08", "description": "Gift wrap supplies",      "category": "Other",         "amount": 120.00},
-    ]
-
-    categories = [
-        {"name": "Bills",         "amount": 1500.00, "percent": 32},
-        {"name": "Shopping",      "amount": 1299.00, "percent": 28},
-        {"name": "Entertainment", "amount": 799.00,  "percent": 17},
-        {"name": "Health",        "amount": 450.00,  "percent": 10},
-        {"name": "Food",          "amount": 430.50,  "percent": 9},
-        {"name": "Other",         "amount": 120.00,  "percent": 3},
-        {"name": "Transport",     "amount": 90.00,   "percent": 2},
-    ]
+    transactions = get_recent_expenses(user_id)
+    categories = get_category_breakdown(user_id)
 
     return render_template(
         "profile.html",
