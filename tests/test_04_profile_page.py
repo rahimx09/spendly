@@ -30,8 +30,16 @@ def _seed_demo_user() -> int:
 
 
 def _sign_in(client) -> int:
-    """Log the demo user in via POST /login. Returns the user id."""
-    _seed_demo_user()
+    """Seed the demo user + sample expenses, then log them in.
+
+    `seed_db` is a no-op once any user exists in the DB, so we
+    must call it BEFORE `create_user`. Calling it first also
+    guarantees the demo user has 8 expenses to render — that
+    matters from Step 5 onward, when the profile view reads
+    real data instead of hardcoded lists.
+    """
+    from database.db import seed_db
+    seed_db()
     client.post(
         "/login",
         data={"email": DEMO_EMAIL, "password": DEMO_PASSWORD},

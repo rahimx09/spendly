@@ -129,18 +129,125 @@ def find_user_by_email(email: str) -> sqlite3.Row | None:
 def find_user_by_id(user_id: int) -> sqlite3.Row | None:
     """Return the user with the given id, or None.
 
-    Used by the navbar to look up the signed-in user's name
-    once per request without running a query in the template.
+    Used by the navbar to look up the signed-in user once per
+    request. Includes `created_at` so the profile view can
+    render the "Member since" label without an extra round-trip.
     """
     conn = get_db()
     try:
         return conn.execute(
-            "SELECT id, name, email, password_hash FROM users "
-            "WHERE id = ?",
+            "SELECT id, name, email, password_hash, created_at "
+            "FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
     finally:
         conn.close()
+
+
+def get_user_total_spent(user_id: int) -> float:
+    """Sum of every expense amount for the user. 0.0 if none.
+
+    COALESCE collapses the NULL from an empty SUM to 0 so the
+    caller never has to special-case the empty path.
+    """
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) FROM expenses "
+            "WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        return float(row[0])
+    finally:
+        conn.close()
+
+
+def get_user_expense_count(user_id: int) -> int:
+    """Number of expense rows for the user. 0 if none."""
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT COUNT(*) FROM expenses WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def get_user_top_category(user_id: int) -> str | None:
+    """Category with the largest sum for the user, or None.
+
+    None means the user has no expenses — the view layer
+    translates that to an em-dash placeholder so the template
+    never renders an empty stat.
+    """
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT category FROM expenses "
+            "WHERE user_id = ? "
+            "GROUP BY category "
+            "ORDER BY SUM(amount) DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+        return row["category"] if row else None
+    finally:
+        conn.close()
+
+
+def get_recent_expenses(user_id: int, limit: int = 8) -> list[dict]:
+    """Most recent N expenses for the user, newest first.
+
+    Sort key is `date DESC, id DESC` — `id` breaks ties when
+    multiple expenses share a date (date has no time
+    component, so insertion order is the natural tiebreaker).
+    Returns plain dicts so the template can iterate without
+    surprises from sqlite3.Row.
+    """
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT date, description, category, amount "
+            "FROM expenses "
+            "WHERE user_id = ? "
+            "ORDER BY date DESC, id DESC LIMIT ?",
+            (user_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_category_breakdown(user_id: int) -> list[dict]:
+    """Per-category totals with percent-of-spend, biggest first.
+
+    SQL does the aggregation and ordering; Python computes
+    each row's percent against the running total so the
+    breakdown always sums to ~100 without a second pass.
+    Returns [] when the user has no expenses.
+    """
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT category, SUM(amount) AS amount "
+            "FROM expenses WHERE user_id = ? "
+            "GROUP BY category ORDER BY amount DESC",
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    total = sum(r["amount"] for r in rows)
+    breakdown = []
+    for r in rows:
+        amount = float(r["amount"])
+        percent = round(amount / total * 100) if total else 0
+        breakdown.append({
+            "name": r["category"],
+            "amount": amount,
+            "percent": percent,
+        })
+    return breakdown
 
 
 def seed_db() -> None:
