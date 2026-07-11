@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — Spendly{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-badge">
+            <span class="hero-badge-dot"></span>
+            Coming soon
+        </div>
+        <h1 class="hero-title">Analytics</h1>
+        <p class="hero-subtitle">
+            Trends, category breakdowns over time, and month-on-month
+            comparisons — all on one page. We're shaping it now.
+        </p>
+    </div>
+</section>
+
+<section class="analytics-coming-soon">
+    <div class="coming-soon-previews">
+        <div class="preview-skeleton">
+            <span class="preview-skeleton-label">Spending trend</span>
+            <div class="preview-skeleton-bar" style="height: 56%"></div>
+            <div class="preview-skeleton-bar preview-skeleton-bar-short" style="height: 32%"></div>
+        </div>
+        <div class="preview-skeleton">
+            <span class="preview-skeleton-label">Top categories</span>
+            <div class="preview-skeleton-bar" style="width: 78%"></div>
+            <div class="preview-skeleton-bar" style="width: 54%"></div>
+            <div class="preview-skeleton-bar" style="width: 38%"></div>
+        </div>
+        <div class="preview-skeleton">
+            <span class="preview-skeleton-label">Month over month</span>
+            <div class="preview-skeleton-bar" style="width: 62%"></div>
+            <div class="preview-skeleton-bar" style="width: 84%"></div>
+        </div>
+    </div>
+
+    <div class="coming-soon-cta">
+        <a href="{{ url_for('profile') }}" class="btn-ghost">Back to profile</a>
+    </div>
+</section>
+
+{% endblock %}

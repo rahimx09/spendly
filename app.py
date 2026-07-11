@@ -219,6 +219,13 @@ def profile():
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
 
+@app.route("/analytics")
+def analytics():
+    if g.user is None:
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
+
+
 @app.route("/logout")
 def logout():
     # pop(..., None) is safe whether or not a user is signed in —
