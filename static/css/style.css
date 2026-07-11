@@ -113,6 +113,19 @@ a { color: inherit; text-decoration: none; }
 
 .nav-cta:hover { background: var(--accent) !important; }
 
+/* Active state for a plain nav link (e.g. Analytics).
+   Uses an accent-colored bottom border so the active page is
+   obvious without changing the link's text weight or color. */
+.nav-link {
+    position: relative;
+    padding-bottom: 0.25rem;
+}
+
+.nav-link.is-active {
+    color: var(--ink);
+    border-bottom: 2px solid var(--accent);
+}
+
 /* ------------------------------------------------------------------ */
 /* Main                                                                */
 /* ------------------------------------------------------------------ */
@@ -1022,4 +1035,132 @@ a { color: inherit; text-decoration: none; }
     .hero { padding: 3rem 1rem 2rem; }
     .profile-page { padding: 2rem 1rem 3rem; }
     .section-card { padding: 1.25rem 1rem 1.5rem; }
+}
+
+/* Date filter bar — Step 6 */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    justify-content: space-between;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+}
+.filter-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.filter-preset {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--ink-muted);
+    text-decoration: none;
+    font: 500 0.9rem/1 var(--font-body);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.filter-preset:hover { border-color: var(--accent); color: var(--accent); }
+.filter-preset.is-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper-card);
+}
+.filter-dates {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+}
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font: 500 0.75rem/1 var(--font-body);
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.filter-input {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--paper-warm);
+    color: var(--ink);
+    font: 400 0.9rem/1 var(--font-body);
+}
+.filter-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.filter-apply {
+    padding: 8px 16px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: var(--paper-card);
+    font: 600 0.9rem/1 var(--font-body);
+    cursor: pointer;
+}
+.filter-clear {
+    padding: 8px 4px;
+    color: var(--ink-muted);
+    text-decoration: underline;
+    font: 500 0.85rem/1 var(--font-body);
+}
+
+/* ------------------------------------------------------------------ */
+/* Coming soon — Analytics                                             */
+/* ------------------------------------------------------------------ */
+
+.analytics-coming-soon {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 2rem 5rem;
+}
+
+.coming-soon-previews {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 2.5rem;
+}
+
+.preview-skeleton {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 140px;
+}
+
+.preview-skeleton-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    color: var(--ink-muted);
+    margin-bottom: 0.4rem;
+}
+
+.preview-skeleton-bar {
+    height: 8px;
+    background: var(--border-soft);
+    border-radius: 999px;
+    width: 100%;
+}
+
+.coming-soon-cta {
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .coming-soon-previews { grid-template-columns: 1fr; }
 }

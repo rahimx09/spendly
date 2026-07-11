@@ -60,6 +60,34 @@
             {% endfor %}
         </div>
 
+        <!-- 2b. Date filter bar -->
+        <div class="filter-bar">
+            <div class="filter-presets">
+                <a class="filter-preset{% if filter.preset == 'all' %} is-active{% endif %}"
+                   href="{{ url_for('profile') }}">All</a>
+                <a class="filter-preset{% if filter.preset == 'this_month' %} is-active{% endif %}"
+                   href="{{ url_for('profile', preset='this_month') }}">This month</a>
+                <a class="filter-preset{% if filter.preset == 'last_7' %} is-active{% endif %}"
+                   href="{{ url_for('profile', preset='last_7') }}">Last 7 days</a>
+                <a class="filter-preset{% if filter.preset == 'last_30' %} is-active{% endif %}"
+                   href="{{ url_for('profile', preset='last_30') }}">Last 30 days</a>
+            </div>
+            <form class="filter-dates" method="get" action="{{ url_for('profile') }}">
+                <label class="filter-field">
+                    <span>From</span>
+                    <input class="filter-input" type="date" name="from" value="{{ filter.from_date }}">
+                </label>
+                <label class="filter-field">
+                    <span>To</span>
+                    <input class="filter-input" type="date" name="to" value="{{ filter.to_date }}">
+                </label>
+                <button class="filter-apply" type="submit">Apply</button>
+                {% if filter.active %}
+                <a class="filter-clear" href="{{ url_for('profile') }}">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+
         <!-- 3. Transaction history table -->
         <div class="section-card">
             <h2 class="section-title">Recent transactions</h2>

@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import sqlite3
+from typing import Mapping, NamedTuple
 
 from flask import Flask, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
@@ -73,6 +74,70 @@ def block_auth_pages_when_signed_in():
     if g.user is not None and request.endpoint in SIGNED_OUT_ONLY_ENDPOINTS:
         return redirect(url_for("landing"))
     return None
+
+
+def _safe_iso(value: str | None) -> str | None:
+    """Return the ISO `YYYY-MM-DD` string if `value` is a valid date, else None."""
+    if not value:
+        return None
+    try:
+        return datetime.date.fromisoformat(value.strip()).isoformat()
+    except ValueError:
+        return None
+
+
+class DateFilter(NamedTuple):
+    """Resolved date filter passed to the profile view + template.
+
+    `from_date`/`to_date` are the resolved ISO bounds (or `""` when
+    unset, so the template can render the empty string in `<input>`s
+    without a separate `is None` branch). `preset` is the chip name
+    for the UI's active state — one of `"all"`, `"this_month"`,
+    `"last_7"`, `"last_30"`, or `"custom"`. `active` flips the
+    Clear link and the "is-active" preset chip.
+    """
+    from_date: str
+    to_date: str
+    preset: str
+    active: bool
+
+
+def _resolve_date_filter(args: Mapping[str, str]) -> DateFilter:
+    """Turn `request.args` into a resolved `DateFilter`.
+
+    Explicit `from`/`to` win over a `preset`. Unknown or missing presets fall
+    back to "all" (no bounds). A bad `from`/`to` value invalidates the whole
+    filter (both bounds dropped, preset reported as "all") rather than
+    raising, so the page still renders. Presets are computed in Python from
+    today's date and turned into ISO bounds — no SQL date math.
+    """
+    today = datetime.date.today()
+    from_raw = (args.get("from") or "").strip()
+    to_raw = (args.get("to") or "").strip()
+
+    if from_raw or to_raw:
+        from_date = _safe_iso(from_raw)
+        to_date = _safe_iso(to_raw)
+        # If either raw value is present and fails validation, the whole
+        # filter is dropped — partial bounds from a half-broken form
+        # would confuse users more than help them.
+        if (from_raw and not from_date) or (to_raw and not to_date):
+            return DateFilter("", "", "all", False)
+        active = bool(from_date or to_date)
+        return DateFilter(from_date or "", to_date or "",
+                          "custom" if active else "all", active)
+
+    preset = (args.get("preset") or "").strip()
+    if preset == "this_month":
+        return DateFilter(today.replace(day=1).isoformat(), today.isoformat(),
+                          "this_month", True)
+    if preset == "last_7":
+        return DateFilter((today - datetime.timedelta(days=6)).isoformat(),
+                          today.isoformat(), "last_7", True)
+    if preset == "last_30":
+        return DateFilter((today - datetime.timedelta(days=29)).isoformat(),
+                          today.isoformat(), "last_30", True)
+    return DateFilter("", "", "all", False)
 
 
 @app.route("/")
@@ -177,6 +242,9 @@ def profile():
         return redirect(url_for("login"))
 
     user_id = g.user["id"]
+    date_filter = _resolve_date_filter(request.args)
+    from_date = date_filter.from_date or None
+    to_date = date_filter.to_date or None
 
     # `created_at` is the SQLite `datetime('now')` literal, e.g.
     # "2026-03-15 12:34:56". Slicing the first 10 chars before
@@ -193,9 +261,9 @@ def profile():
         "initials": (g.user["name"][:2] or "DU").upper(),
     }
 
-    total = get_user_total_spent(user_id)
-    count = get_user_expense_count(user_id)
-    top = get_user_top_category(user_id)
+    total = get_user_total_spent(user_id, from_date, to_date)
+    count = get_user_expense_count(user_id, from_date, to_date)
+    top = get_user_top_category(user_id, from_date, to_date)
 
     summary = [
         {"label": "Total spent",  "value": f"₹{total:,.2f}", "icon": "wallet"},
@@ -203,8 +271,15 @@ def profile():
         {"label": "Top category", "value": top or "—",         "icon": "tag"},
     ]
 
-    transactions = get_recent_expenses(user_id)
-    categories = get_category_breakdown(user_id)
+    # When no filter is active, the recent-transactions table should
+    # show every row (the Step 5 limit=8 cap was a "recent" preview,
+    # not a hard pagination). When a filter IS active we keep the
+    # 8-row cap so the table stays tight for wide date ranges.
+    recent_limit = 8 if date_filter.active else None
+    transactions = get_recent_expenses(
+        user_id, limit=recent_limit, from_date=from_date, to_date=to_date
+    )
+    categories = get_category_breakdown(user_id, from_date, to_date)
 
     return render_template(
         "profile.html",
@@ -212,12 +287,20 @@ def profile():
         summary=summary,
         transactions=transactions,
         categories=categories,
+        filter=date_filter,
     )
 
 
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
+
+@app.route("/analytics")
+def analytics():
+    if g.user is None:
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
+
 
 @app.route("/logout")
 def logout():
