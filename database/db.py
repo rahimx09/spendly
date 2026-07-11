@@ -86,6 +86,29 @@ def init_db() -> None:
         conn.close()
 
 
+def _where_with_user(user_id: int,
+                      from_date: str | None = None,
+                      to_date: str | None = None) -> tuple[str, list]:
+    """Return `WHERE user_id = ? [AND date >= ?] [AND date <= ?]` + bound params.
+
+    Both date bounds are inclusive (`>=` / `<=`). Either may be None, in
+    which case that side is unbounded. The static fragment contains only
+    hardcoded `AND date ...` literals; user data flows exclusively through
+    the bound params, so callers can `conn.execute(sql, params)` with no
+    f-string splice. ISO `YYYY-MM-DD` strings sort lexicographically, so
+    plain comparison needs no `date()` cast.
+    """
+    conditions = ["user_id = ?"]
+    params: list = [user_id]
+    if from_date:
+        conditions.append("date >= ?")
+        params.append(from_date)
+    if to_date:
+        conditions.append("date <= ?")
+        params.append(to_date)
+    return ("WHERE " + " AND ".join(conditions), params)
+
+
 def create_user(name: str, email: str, password: str) -> int:
     """Insert a new user and return their id.
 
@@ -144,98 +167,138 @@ def find_user_by_id(user_id: int) -> sqlite3.Row | None:
         conn.close()
 
 
-def get_user_total_spent(user_id: int) -> float:
-    """Sum of every expense amount for the user. 0.0 if none.
+def get_user_total_spent(user_id: int,
+                         from_date: str | None = None,
+                         to_date: str | None = None) -> float:
+    """Sum of expense amounts for the user within an optional date range.
 
     COALESCE collapses the NULL from an empty SUM to 0 so the
-    caller never has to special-case the empty path.
+    caller never has to special-case the empty path. `from_date`/`to_date`
+    are inclusive ISO `YYYY-MM-DD` bounds; either may be None.
     """
+    where, params = _where_with_user(user_id, from_date, to_date)
     conn = get_db()
     try:
         row = conn.execute(
             "SELECT COALESCE(SUM(amount), 0) FROM expenses "
-            "WHERE user_id = ?",
-            (user_id,),
+            f"{where}",
+            tuple(params),
         ).fetchone()
         return float(row[0])
     finally:
         conn.close()
 
 
-def get_user_expense_count(user_id: int) -> int:
-    """Number of expense rows for the user. 0 if none."""
+def get_user_expense_count(user_id: int,
+                           from_date: str | None = None,
+                           to_date: str | None = None) -> int:
+    """Number of expense rows for the user within an optional date range."""
+    where, params = _where_with_user(user_id, from_date, to_date)
     conn = get_db()
     try:
         return conn.execute(
-            "SELECT COUNT(*) FROM expenses WHERE user_id = ?",
-            (user_id,),
+            "SELECT COUNT(*) FROM expenses "
+            f"{where}",
+            tuple(params),
         ).fetchone()[0]
     finally:
         conn.close()
 
 
-def get_user_top_category(user_id: int) -> str | None:
+def get_user_top_category(user_id: int,
+                          from_date: str | None = None,
+                          to_date: str | None = None) -> str | None:
     """Category with the largest sum for the user, or None.
 
-    None means the user has no expenses — the view layer
+    None means the user has no expenses in range — the view layer
     translates that to an em-dash placeholder so the template
-    never renders an empty stat.
+    never renders an empty stat. `from_date`/`to_date` are inclusive
+    ISO `YYYY-MM-DD` bounds; either may be None.
     """
+    where, params = _where_with_user(user_id, from_date, to_date)
     conn = get_db()
     try:
         row = conn.execute(
             "SELECT category FROM expenses "
-            "WHERE user_id = ? "
+            f"{where} "
             "GROUP BY category "
             "ORDER BY SUM(amount) DESC LIMIT 1",
-            (user_id,),
+            tuple(params),
         ).fetchone()
         return row["category"] if row else None
     finally:
         conn.close()
 
 
-def get_recent_expenses(user_id: int, limit: int = 8) -> list[dict]:
-    """Most recent N expenses for the user, newest first.
+def get_recent_expenses(user_id: int,
+                        limit: int | None = None,
+                        from_date: str | None = None,
+                        to_date: str | None = None) -> list[dict]:
+    """Most recent expenses for the user, newest first, in range.
 
     Sort key is `date DESC, id DESC` — `id` breaks ties when
     multiple expenses share a date (date has no time
     component, so insertion order is the natural tiebreaker).
-    Returns plain dicts so the template can iterate without
-    surprises from sqlite3.Row.
+    `from_date`/`to_date` are inclusive ISO `YYYY-MM-DD` bounds;
+    either may be None. `limit` defaults to None (return every
+    matching row); pass an int to cap the result. Returns plain
+    dicts so the template can iterate without surprises from
+    sqlite3.Row.
     """
+    where, params = _where_with_user(user_id, from_date, to_date)
+    sql = (
+        "SELECT date, description, category, amount "
+        "FROM expenses "
+        f"{where} "
+        "ORDER BY date DESC, id DESC"
+    )
+    if limit is not None:
+        sql += " LIMIT ?"
+        params = [*params, limit]
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT date, description, category, amount "
-            "FROM expenses "
-            "WHERE user_id = ? "
-            "ORDER BY date DESC, id DESC LIMIT ?",
-            (user_id, limit),
-        ).fetchall()
+        rows = conn.execute(sql, tuple(params)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
 
 
-def get_category_breakdown(user_id: int) -> list[dict]:
-    """Per-category totals with percent-of-spend, biggest first.
+def get_category_breakdown(user_id: int,
+                           from_date: str | None = None,
+                           to_date: str | None = None) -> list[dict]:
+    """Per-category totals with percent-of-spend, biggest first, in range.
 
     SQL does the aggregation and ordering; Python computes
     each row's percent against the running total so the
     breakdown always sums to ~100 without a second pass.
-    Returns [] when the user has no expenses.
+    `from_date`/`to_date` are inclusive ISO `YYYY-MM-DD` bounds;
+    either may be None. Returns [] when the user has no expenses
+    in range.
     """
+    where, params = _where_with_user(user_id, from_date, to_date)
     conn = get_db()
     try:
         rows = conn.execute(
             "SELECT category, SUM(amount) AS amount "
-            "FROM expenses WHERE user_id = ? "
+            "FROM expenses "
+            f"{where} "
             "GROUP BY category ORDER BY amount DESC",
-            (user_id,),
+            tuple(params),
         ).fetchall()
     finally:
         conn.close()
+
+    total = sum(r["amount"] for r in rows)
+    breakdown = []
+    for r in rows:
+        amount = float(r["amount"])
+        percent = round(amount / total * 100) if total else 0
+        breakdown.append({
+            "name": r["category"],
+            "amount": amount,
+            "percent": percent,
+        })
+    return breakdown
 
     total = sum(r["amount"] for r in rows)
     breakdown = []
