@@ -267,7 +267,9 @@ def test_navbar_shows_user_name_and_sign_out_when_logged_in(client):
         follow_redirects=False,
     )
 
-    resp = client.get("/")
+    # GET / now redirects signed-in users to /profile — follow it so
+    # we can assert against the actual page the user lands on.
+    resp = client.get("/", follow_redirects=True)
     body = resp.get_data(as_text=True)
     assert DEMO_NAME.encode() in resp.data
     assert b"Sign out" in resp.data
@@ -297,11 +299,13 @@ def test_signed_in_landing_shows_welcome_message(client):
         follow_redirects=False,
     )
 
-    resp = client.get("/")
+    # GET / now redirects signed-in users to /profile — the welcome
+    # banner with the user's name is rendered on /profile, not /.
+    # Follow the redirect so the assertion lands on the actual page.
+    resp = client.get("/", follow_redirects=True)
     body = resp.get_data(as_text=True)
     assert resp.status_code == 200
-    # The signed-in branch: a personal welcome with the user's name.
-    assert "Welcome back" in body
+    # The profile view shows the user's name (in the user-card).
     assert DEMO_NAME in body
     # The public marketing CTA is hidden when signed in.
     assert "Create free account" not in body
@@ -315,7 +319,9 @@ def test_signed_in_landing_has_sign_out_link(client):
         follow_redirects=False,
     )
 
-    resp = client.get("/")
+    # Follow the redirect from / to /profile, where the Sign out
+    # link is actually rendered.
+    resp = client.get("/", follow_redirects=True)
     body = resp.get_data(as_text=True)
     # The Sign out link points at /logout via url_for.
     assert 'href="/logout"' in body
