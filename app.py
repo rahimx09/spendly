@@ -1,4 +1,5 @@
 import datetime
+import math
 import os
 import re
 import sqlite3
@@ -8,6 +9,8 @@ from flask import Flask, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from database.db import (
+    add_expense as db_add_expense,
+    CATEGORIES,
     create_user,
     find_user_by_email,
     find_user_by_id,
@@ -32,6 +35,10 @@ app.secret_key = os.environ.get(
 
 # Validation bounds for the registration form.
 NAME_MAX, EMAIL_MAX, PW_MIN, PW_MAX = 100, 254, 8, 128
+# Upper bound on a single expense amount; rejects NaN/inf via math.isfinite.
+AMOUNT_MAX = 1_000_000_000
+# Cap on the optional description text; longer input is silently truncated.
+DESCRIPTION_MAX = 200
 # Lightweight email shape check — catches obvious garbage, not
 # RFC-perfect validation (out of scope for this step).
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -310,9 +317,63 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if g.user is None:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        amount_raw = (request.form.get("amount") or "").strip()
+        category = (request.form.get("category") or "").strip()
+        date_raw = (request.form.get("date") or "").strip()
+        description = (request.form.get("description") or "").strip()
+
+        # Validate — first failing rule wins (mirrors register()).
+        try:
+            amount = float(amount_raw)
+        except ValueError:
+            error = "Please enter a valid amount."
+        else:
+            # NaN/inf pass float() but break SQL aggregates — reject them
+            # before the range checks so the range checks stay simple.
+            if not math.isfinite(amount):
+                error = "Please enter a valid amount."
+            elif amount <= 0:
+                error = "Amount must be greater than zero."
+            elif amount > AMOUNT_MAX:
+                error = "Amount is too large."
+            elif category not in CATEGORIES:
+                error = "Please choose a valid category."
+            else:
+                # Parse the date once, reuse for the validity check and the insert.
+                parsed_date = _safe_iso(date_raw)
+                if not parsed_date:
+                    error = "Please enter a valid date (YYYY-MM-DD)."
+                else:
+                    # Optional description: cap at DESCRIPTION_MAX chars, store
+                    # None when blank (not "") so the profile table's empty
+                    # cell renders cleanly.
+                    description = description[:DESCRIPTION_MAX] if description else None
+                    db_add_expense(
+                        g.user["id"], amount, category, parsed_date, description,
+                    )
+                    return redirect(url_for("profile"))
+
+        return render_template(
+            "expenses/add.html",
+            error=error,
+            CATEGORIES=CATEGORIES,
+            amount=amount_raw,
+            category=category,
+            date=date_raw,
+            description=description,
+        )
+
+    return render_template(
+        "expenses/add.html",
+        CATEGORIES=CATEGORIES,
+        today=datetime.date.today().isoformat(),
+    )
 
 
 @app.route("/expenses/<int:id>/edit")
