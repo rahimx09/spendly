@@ -129,6 +129,28 @@ def create_user(name: str, email: str, password: str) -> int:
         conn.close()
 
 
+def add_expense(user_id: int, amount: float, category: str,
+                date: str, description: str | None) -> int:
+    """Insert one expense for `user_id` and return its row id.
+
+    `date` and `category` are expected pre-validated by the caller
+    (the route enforces the CATEGORIES membership and ISO-date rules),
+    but every value is still bound as a parameter — never interpolated.
+    `description` may be None to store NULL (an omitted field).
+    """
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (user_id, amount, category, date, description),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
 def find_user_by_email(email: str) -> sqlite3.Row | None:
     """Return the user with the given email, or None.
 
