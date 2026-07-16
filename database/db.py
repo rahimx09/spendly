@@ -151,6 +151,51 @@ def add_expense(user_id: int, amount: float, category: str,
         conn.close()
 
 
+def get_expense_by_id(user_id: int, expense_id: int) -> sqlite3.Row | None:
+    """Return the row with `expense_id` owned by `user_id`, or None.
+
+    The `AND user_id = ?` clause means a foreign id (or a non-existent
+    one) both return None — the route cannot distinguish the two cases,
+    and that is the correct behaviour (no existence leak).
+    """
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT id, user_id, amount, category, date, description "
+            "FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def update_expense(user_id: int, expense_id: int,
+                   amount: float, category: str,
+                   date: str, description: str | None) -> int:
+    """Update the row owned by `user_id` with `expense_id`. Returns
+    the affected row count (0 if no matching row, 1 on success).
+
+    `date` and `category` are expected pre-validated by the caller
+    (the route enforces the CATEGORIES membership and ISO-date rules);
+    every value is still bound as a parameter — never interpolated.
+    The double WHERE clause is the single source of truth for
+    ownership: a hand-crafted POST against someone else's id affects
+    zero rows even if the route forgot to check.
+    """
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "UPDATE expenses "
+            "SET amount = ?, category = ?, date = ?, description = ? "
+            "WHERE id = ? AND user_id = ?",
+            (amount, category, date, description, expense_id, user_id),
+        )
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
+
+
 def find_user_by_email(email: str) -> sqlite3.Row | None:
     """Return the user with the given email, or None.
 
@@ -269,7 +314,7 @@ def get_recent_expenses(user_id: int,
     """
     where, params = _where_with_user(user_id, from_date, to_date)
     sql = (
-        "SELECT date, description, category, amount "
+        "SELECT id, date, description, category, amount "
         "FROM expenses "
         f"{where} "
         "ORDER BY date DESC, id DESC"
@@ -309,18 +354,6 @@ def get_category_breakdown(user_id: int,
         ).fetchall()
     finally:
         conn.close()
-
-    total = sum(r["amount"] for r in rows)
-    breakdown = []
-    for r in rows:
-        amount = float(r["amount"])
-        percent = round(amount / total * 100) if total else 0
-        breakdown.append({
-            "name": r["category"],
-            "amount": amount,
-            "percent": percent,
-        })
-    return breakdown
 
     total = sum(r["amount"] for r in rows)
     breakdown = []
