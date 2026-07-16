@@ -175,7 +175,7 @@ def test_recent_expenses_shape_matches_template(app_with_tmp_db):
     finally:
         conn.close()
     [row] = get_recent_expenses(user_id)
-    assert set(row.keys()) == {"date", "description", "category", "amount"}
+    assert set(row.keys()) == {"id", "date", "description", "category", "amount"}
     assert row["description"] == "Coffee"
 
 

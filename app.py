@@ -15,15 +15,37 @@ from database.db import (
     find_user_by_email,
     find_user_by_id,
     get_category_breakdown,
+    get_expense_by_id,
     get_recent_expenses,
     get_user_expense_count,
     get_user_top_category,
     get_user_total_spent,
     init_db,
     seed_db,
+    update_expense,
 )
 
 app = Flask(__name__)
+
+# Disable browser caching of static files during development — students
+# edit CSS/JS frequently, and a stale stylesheet hides the change they
+# just made. In production this should be removed (or set to a longer
+# max-age) so static assets stay cacheable.
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+
+@app.context_processor
+def _inject_asset_version():
+    """Append `?v=<mtime>` to static asset URLs so the browser re-fetches
+    whenever the file changes — even if SEND_FILE_MAX_AGE_DEFAULT was
+    not yet in place when an older response got cached."""
+    import os
+    static_root = os.path.join(app.static_folder, "css", "style.css")
+    try:
+        version = int(os.path.getmtime(static_root))
+    except OSError:
+        version = 0
+    return {"asset_version": version}
 
 # Session cookies are signed with this key. In production, set
 # SPENDLY_SECRET_KEY to a strong random value. The fallback here
@@ -376,9 +398,91 @@ def add_expense():
     )
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    if g.user is None:
+        return redirect(url_for("login"))
+
+    user_id = g.user["id"]
+    # Sentinel; the POST branches will overwrite this on success.
+    error: str | None = None
+    # Sentinel for the "row not found on POST" path. Set below.
+    row_missing = False
+
+    if request.method == "POST":
+        amount_raw = (request.form.get("amount") or "").strip()
+        category = (request.form.get("category") or "").strip()
+        date_raw = (request.form.get("date") or "").strip()
+        description = (request.form.get("description") or "").strip()
+
+        # Validate — first failing rule wins (mirrors add_expense()).
+        try:
+            amount = float(amount_raw)
+        except ValueError:
+            error = "Please enter a valid amount."
+        else:
+            if not math.isfinite(amount):
+                error = "Please enter a valid amount."
+            elif amount <= 0:
+                error = "Amount must be greater than zero."
+            elif amount > AMOUNT_MAX:
+                error = "Amount is too large."
+            elif category not in CATEGORIES:
+                error = "Please choose a valid category."
+            else:
+                parsed_date = _safe_iso(date_raw)
+                if not parsed_date:
+                    error = "Please enter a valid date (YYYY-MM-DD)."
+                else:
+                    description = (
+                        description[:DESCRIPTION_MAX] if description else None
+                    )
+                    if update_expense(
+                        user_id, id, amount, category,
+                        parsed_date, description,
+                    ) == 0:
+                        # Foreign or non-existent id. Treat as a
+                        # 404-style redirect — never leak existence.
+                        row_missing = True
+                    else:
+                        return redirect(url_for("profile"))
+
+        if row_missing:
+            return redirect(url_for("profile"))
+
+        if error is not None:
+            # POST failed validation. Re-render with entered fields
+            # echoed back; fall back to the loaded row's values for
+            # any field the user did not submit (still scope by
+            # user_id — a foreign id resolves to None here).
+            loaded = get_expense_by_id(user_id, id)
+            expense = loaded or {
+                "amount": amount_raw, "category": category,
+                "date": date_raw, "description": description,
+            }
+            return render_template(
+                "expenses/edit.html",
+                error=error,
+                CATEGORIES=CATEGORIES,
+                expense=expense,
+                amount=amount_raw,
+                category=category,
+                date=date_raw,
+                description=description,
+            )
+
+    # GET path: load the row scoped to the signed-in user. A foreign
+    # or missing id silently redirects to /profile — no rendering,
+    # no error message, no existence leak.
+    expense = get_expense_by_id(user_id, id)
+    if expense is None:
+        return redirect(url_for("profile"))
+
+    return render_template(
+        "expenses/edit.html",
+        CATEGORIES=CATEGORIES,
+        expense=expense,
+    )
 
 
 @app.route("/expenses/<int:id>/delete")

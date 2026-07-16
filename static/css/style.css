@@ -877,6 +877,8 @@ a { color: inherit; text-decoration: none; }
 
 /* --- Transactions table --- */
 
+/* Wrap so the table can scroll horizontally on very narrow viewports
+   instead of overflowing the card. */
 .table-wrap {
     overflow-x: auto;
     margin: 0 -0.25rem;
@@ -884,9 +886,27 @@ a { color: inherit; text-decoration: none; }
 
 .expense-table {
     width: 100%;
+    /* `fixed` makes the browser honour the per-column <colgroup> widths
+       instead of sizing columns by content — which is what was
+       squeezing the Amount/Action columns when descriptions were
+       long. Without this, the `width: 1%` trick on .expense-actions
+       and the column percentages below are silently ignored. */
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 0.9rem;
     min-width: 540px;
+}
+
+/* All cells share a baseline of muted text, normal weight, and the
+   same horizontal padding so columns line up under each other. */
+.expense-table th,
+.expense-table td {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--ink-soft);
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .expense-table th {
@@ -896,18 +916,11 @@ a { color: inherit; text-decoration: none; }
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 0.6rem 0.75rem;
     border-bottom: 1px solid var(--border);
     background: transparent;
 }
 
-.expense-table td {
-    padding: 0.85rem 0.75rem;
-    border-bottom: 1px solid var(--border-soft);
-    color: var(--ink-soft);
-    vertical-align: middle;
-}
-
+.expense-table tbody tr:last-child th,
 .expense-table tbody tr:last-child td {
     border-bottom: none;
 }
@@ -920,23 +933,81 @@ a { color: inherit; text-decoration: none; }
     background: var(--paper-warm);
 }
 
+/* Per-column widths (table-layout: fixed makes these authoritative).
+   All five columns are non-shrinking, so the trailing two no longer
+   get squeezed when the description is long. */
+.expense-table col.col-date    { width: 13%; }
+.expense-table col.col-desc    { width: auto; }
+.expense-table col.col-cat     { width: 18%; }
+.expense-table col.col-amount  { width: 14%; }
+.expense-table col.col-actions { width: 11%; }
+
+/* Date — muted, tabular numerals so the dashes line up across rows. */
 .expense-date {
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    text-align: left;
 }
 
+/* Description — the only column that genuinely "fills" the available
+   space; clamp to one line with ellipsis so a long description never
+   breaks the row height. The full text is still in the HTML for
+   accessibility / tooltip. */
 .expense-desc {
     color: var(--ink);
     font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.expense-amount {
-    text-align: right;
+/* Category — the badge is an inline-block, so centre the cell content. */
+.expense-table td.expense-category {
+    text-align: left;
+}
+
+/* Amount — centred, tabular numerals, but the SAME weight as the
+   other body cells. The previous `font-weight: 600` made the values
+   pop louder than the description, which is backwards (the description
+   is the primary identifier; the amount is a secondary attribute). */
+.expense-amount,
+.expense-table th.expense-amount,
+.expense-table td.expense-amount {
+    text-align: center;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--ink);
     white-space: nowrap;
+}
+
+/* Action — centred to match the Amount column, so the two trailing
+   columns share a visual rhythm. */
+.expense-actions {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.row-action {
+    display: inline-block;
+    /* `vertical-align: middle` on the <td> only centres inline-level
+       text content — an `inline-block` child needs its own
+       vertical-align, otherwise it sits on the cell's text baseline
+       and reads as slightly off-centre relative to the rest of the row. */
+    vertical-align: middle;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.row-action:hover,
+.row-action:focus-visible {
+    background: var(--accent-light);
+    color: var(--accent);
+    outline: none;
 }
 
 /* --- Category badge (one shared style) --- */
